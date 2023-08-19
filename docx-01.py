@@ -3,6 +3,40 @@ from docx.oxml import OxmlElement
 from docx.enum.text import  WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 import os
+def remove_table_shading_and_add_borders(table):
+    tblPr = table._element.tblPr
+
+    # Remove shading from table
+    tblShading = tblPr.find(qn('w:shd'))
+    if tblShading is not None:
+        tblPr.remove(tblShading)
+
+    for row in table.rows:
+        for cell in row.cells:
+            remove_cell_shading_and_add_border(cell)
+
+def remove_cell_shading_and_add_border(cell):
+    tcPr = cell._tc.get_or_add_tcPr()
+
+    # Remove shading
+    shading = tcPr.find(qn('w:shd'))
+    if shading is not None:
+        tcPr.remove(shading)
+
+    # Add borders
+    tcBorders = tcPr.find(qn('w:tcBorders'))
+    if tcBorders is None:
+        tcBorders = OxmlElement('w:tcBorders')
+        tcPr.append(tcBorders)
+
+    for border_type in ['left', 'top', 'right', 'bottom']:
+        border = tcBorders.find(qn(f'w:{border_type}'))
+        if border is None:
+            border = OxmlElement(f'w:{border_type}')
+            tcBorders.append(border)
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:color'), '000000')  # Black color
 
 def process_docx_file(file_path):
     doc = Document(file_path)
@@ -56,6 +90,7 @@ def process_docx_file(file_path):
     # 设置段落居中对齐
     new_tc2_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     # 保存文档
+    remove_table_shading_and_add_borders(table)
     doc.save(file_path)
 
 def process_docx_files_in_folder(folder_path):
